@@ -1,24 +1,62 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { useState, useEffect } from "react";
+import axios, { AxiosResponse } from "axios";
+import { convertString } from "./services/convert";
+import { fisherYatesShuffle } from "./services/shuffle";
+import "./App.css";
+
+interface Question {
+  results: any;
+}
 
 function App() {
+  const [questionNumber, setQuestionNumber] = useState<number>(1);
+  const [question, setQuestion] = useState<string>();
+  const [multipleChoice, setMultipleChoice] = useState<Array<string>>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [correctAnswer, setCorrectAnswer] = useState<string>();
+
+  useEffect(() => {
+    const fetchQuestion = async () => {
+      const result: AxiosResponse<Question> = await axios.get(
+        "https://opentdb.com/api.php?amount=1&difficulty=easy&type=multiple"
+      );
+      const question: string = result.data.results[0].question;
+
+      setQuestion(convertString(question));
+
+      const correctAnswer: string = result.data.results[0].correct_answer;
+      const wrongAnswers: [] = result.data.results[0].incorrect_answers;
+
+      let multipleChoice = [...wrongAnswers, correctAnswer];
+
+      fisherYatesShuffle(multipleChoice);
+      setMultipleChoice(multipleChoice);
+      setCorrectAnswer(correctAnswer);
+      console.log(correctAnswer);
+    };
+
+    fetchQuestion();
+  }, [questionNumber]);
+
+  function answer(e: any) {
+    if (e.target.value === correctAnswer) {
+      const nextQuestion = questionNumber + 1;
+      setQuestionNumber(nextQuestion);
+    }
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <div>
+        <h1>{`${question}`}</h1>
+      </div>
+      <div>
+        {multipleChoice.map((choice, i) => (
+          <button key={i} value={choice} onClick={answer}>
+            {choice}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
